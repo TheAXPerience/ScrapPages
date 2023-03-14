@@ -1,5 +1,6 @@
 venv
 scrappages/gallery/migrations
+scrappages/profiles/migrations
 scrappages/.vscode
 scrappages/scrappages/__pycache__
 scrappages/profiles/__pycache__

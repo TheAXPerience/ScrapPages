@@ -21,7 +21,8 @@ class Scrap(models.Model):
         User,
         on_delete = models.SET(
             get_sentinel_user
-        )
+        ),
+        related_name = "scraps"
     )
 
     title = models.CharField(
@@ -50,6 +51,11 @@ class Scrap(models.Model):
         default = "image"
     )
 
+    likers = models.ManyToManyField(
+        User,
+        related_name = "scrap_likes"
+    )
+
 
 class Comment(models.Model):
     content = models.TextField()
@@ -66,18 +72,26 @@ class Comment(models.Model):
         User,
         on_delete = models.SET(
             get_sentinel_user
-        )
+        ),
+        related_name = "+"
     )
 
     scrap = models.ForeignKeyField(
         'Scrap',
-        on_delete = models.CASCADE
+        on_delete = models.CASCADE,
+        related_name = "comments"
     )
 
     reply_to = models.ForeignKeyField(
         'self',
         on_delete = models.CASCADE,
-        null = True
+        null = True,
+        related_name = "replies"
+    )
+
+    likers = models.ManyToManyField(
+        User,
+        related_name = "comment_likes"
     )
 
 
@@ -88,7 +102,8 @@ class Tag(models.Model):
 
     scrap = models.ForeignKeyField(
         'Scrap',
-        on_delete = models.CASCADE
+        on_delete = models.CASCADE,
+        related_name = "tags"
     )
 
     # apparently Django only supports single primary keys
