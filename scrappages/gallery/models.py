@@ -39,24 +39,10 @@ class Scrap(models.Model):
         upload_to = user_directory_path
     )
 
-    ACCEPTED_FILETYPES = [
-        ("text", (
-                ("txt", "Text"),
-            )
-        ),
-        ("image", (
-                ("png", "PNG"),
-                ("jpg", "JPG"),
-                ("gif", "GIF"),
-            )
-        )
-    ]
-
     # in case I need it
     # text or image
     file_type = models.CharField(
         max_length = 7,
-        choices = ACCEPTED_FILETYPES,
         default = "image"
     )
 
