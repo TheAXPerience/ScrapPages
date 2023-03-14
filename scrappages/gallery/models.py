@@ -34,6 +34,10 @@ class Scrap(models.Model):
         auto_now=True
     )
 
+    time_updated = models.DateTimeField(
+        auto_now=True
+    )
+
     # only TXT, PNG, JPG, GIF allowed
     file = models.FileField(
         upload_to = user_directory_path
@@ -51,6 +55,10 @@ class Comment(models.Model):
     content = models.TextField()
 
     time_posted = models.DateTimeField(
+        auto_now=True
+    )
+
+    time_updated = models.DateTimeField(
         auto_now=True
     )
 
