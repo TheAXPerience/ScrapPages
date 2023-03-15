@@ -34,9 +34,20 @@ class Profile(models.Model):
         default=""
     )
 
-    description = models.TextField()
+    description = models.TextField(
+        default=""
+    )
 
     # ensure only PNG and JPG are allowed
     profile_picture = models.ImageField(
-        upload_to=profile_picture_path
+        upload_to=profile_picture_path,
+        blank=True,
+        null=True
     )
+
+    def get_profile_picture_url(self):
+        if self.profile_picture:
+            return self.profile_picture.url
+        
+        # TODO: set up default image + image path
+        return "media/default.jpg"

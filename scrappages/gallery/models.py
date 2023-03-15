@@ -16,6 +16,12 @@ def get_sentinel_user():
     )[0]
 
 
+# User
+#   scraps
+#   comments
+#   scrap_likes
+#   comment_likes
+
 class Scrap(models.Model):
     user = models.ForeignKeyField(
         User,
@@ -29,7 +35,9 @@ class Scrap(models.Model):
         max_length = 100
     )
 
-    description = models.TextField()
+    description = models.TextField(
+        default = ""
+    )
 
     time_posted = models.DateTimeField(
         auto_now=True
@@ -56,6 +64,8 @@ class Scrap(models.Model):
         related_name = "scrap_likes"
     )
 
+    # comments
+
 
 class Comment(models.Model):
     content = models.TextField()
@@ -73,7 +83,7 @@ class Comment(models.Model):
         on_delete = models.SET(
             get_sentinel_user
         ),
-        related_name = "+"
+        related_name = "comments"
     )
 
     scrap = models.ForeignKeyField(
