@@ -8,6 +8,8 @@ def user_directory_path(instance, filename):
     return f"uploads/user__{instance.user.username}/{filename}"
 
 # set user to "deleted"
+
+
 def get_sentinel_user():
     from django.contrib.auth import get_user_model
 
@@ -23,20 +25,20 @@ def get_sentinel_user():
 #   comment_likes
 
 class Scrap(models.Model):
-    user = models.ForeignKeyField(
+    user = models.ForeignKey(
         User,
-        on_delete = models.SET(
+        on_delete=models.SET(
             get_sentinel_user
         ),
-        related_name = "scraps"
+        related_name="scraps"
     )
 
     title = models.CharField(
-        max_length = 100
+        max_length=100
     )
 
     description = models.TextField(
-        default = ""
+        default=""
     )
 
     time_posted = models.DateTimeField(
@@ -49,19 +51,19 @@ class Scrap(models.Model):
 
     # only TXT, PNG, JPG, GIF allowed
     file = models.FileField(
-        upload_to = user_directory_path
+        upload_to=user_directory_path
     )
 
     # in case I need it
     # text or image
     file_type = models.CharField(
-        max_length = 7,
-        default = "image"
+        max_length=7,
+        default="image"
     )
 
     likers = models.ManyToManyField(
         User,
-        related_name = "scrap_likes"
+        related_name="scrap_likes"
     )
 
     # comments
@@ -78,42 +80,42 @@ class Comment(models.Model):
         auto_now=True
     )
 
-    user = models.ForeignKeyField(
+    user = models.ForeignKey(
         User,
-        on_delete = models.SET(
+        on_delete=models.SET(
             get_sentinel_user
         ),
-        related_name = "comments"
+        related_name="comments"
     )
 
-    scrap = models.ForeignKeyField(
+    scrap = models.ForeignKey(
         'Scrap',
-        on_delete = models.CASCADE,
-        related_name = "comments"
+        on_delete=models.CASCADE,
+        related_name="comments"
     )
 
-    reply_to = models.ForeignKeyField(
+    reply_to = models.ForeignKey(
         'self',
-        on_delete = models.CASCADE,
-        null = True,
-        related_name = "replies"
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="replies"
     )
 
     likers = models.ManyToManyField(
         User,
-        related_name = "comment_likes"
+        related_name="comment_likes"
     )
 
 
 class Tag(models.Model):
     name = models.CharField(
-        max_length = 64
+        max_length=64
     )
 
-    scrap = models.ForeignKeyField(
+    scrap = models.ForeignKey(
         'Scrap',
-        on_delete = models.CASCADE,
-        related_name = "tags"
+        on_delete=models.CASCADE,
+        related_name="tags"
     )
 
     # apparently Django only supports single primary keys
@@ -121,6 +123,6 @@ class Tag(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                files=["name", "scrap"], name="unique_scrap_tag_combination"
+                fields=["name", "scrap"], name="unique_scrap_tag_combination"
             )
         ]
