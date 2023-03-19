@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+import datetime
 
 # Create your models here.
 def user_directory_path(instance, filename):
@@ -86,6 +86,10 @@ class Scrap(models.Model):
             ans.append(tag.serialize())
         return ans
     
+    def save(self, *args, **kwargs):
+        self.time_updated = datetime.datetime.now()
+        super(Scrap, self).save(*args, **kwargs)
+
     def delete(self, *args, **kwargs):
         # get and delete file
         try:
