@@ -17,7 +17,7 @@ urlpatterns = [
          name='comment_like'),
     path('<int:sid>/tags', views.scrap_tags_view,
          name='scrap_tags'),
-    path('/tagged/<str:tname>', views.tagged_scraps_view,
+    path('tagged/<str:tname>', views.tagged_scraps_view,
          name='tagged_scraps'),
 ]
 

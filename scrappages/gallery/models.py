@@ -82,7 +82,7 @@ class Scrap(models.Model):
     
     def get_tags(self):
         ans = []
-        for tag in self.tags:
+        for tag in self.tags.all():
             ans.append(tag.serialize())
         return ans
     
@@ -151,6 +151,10 @@ class Comment(models.Model):
             "reply_to_id": None if (not self.reply_to) else self.reply_to.id
         }
         # manually get num_likes
+    
+    def save(self, *args, **kwargs):
+        self.time_updated = datetime.datetime.now()
+        super(Comment, self).save(*args, **kwargs)
 
 
 class Tag(models.Model):

@@ -147,8 +147,8 @@ def specific_user_profile_view(request, username, format=None):
         if "profile_picture" in request.data:
             # validate picture via Pillow
             try:
-                im.verify()
                 im = Image.open(request.data["profile_picture"])
+                im.verify()
             except:
                 return Response("Invalid image file",
                                 status=status.HTTP_400_BAD_REQUEST)
