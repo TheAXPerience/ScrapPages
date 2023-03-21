@@ -189,4 +189,17 @@ def specific_user_scraps_view(request, username, format=None):
     - number of Comments
     - list of Tags
     """
-    pass
+    user = get_object_or_404(User, username=username)
+    scraps = user.scraps.annotate(
+        num_comments=Count('comments', distinct=True),
+        num_likes=Count('likers', distinct=True)).order_by('-time_updated')
+
+    context = []
+    for scrap in scraps:
+        ans = scrap.serialize()
+        ans["file_url"] = request.build_absolute_uri(ans["file_url"])
+        ans["num_comments"] = scrap.num_comments
+        ans["num_likes"] = scrap.num_likes
+        context.append(ans)
+
+    return Response(data=context)

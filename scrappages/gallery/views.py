@@ -1,17 +1,25 @@
 from django.db.models import Count
-from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
-from rest_framework.decorators import api_view, parser_classes, permission_classes, renderer_classes
-from rest_framework.parsers import JSONParser
+from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from PIL import Image
 import json
 from .models import Scrap, Comment, Tag
+
+# enforce tags are at max 64 characters
+# replace non-alphanumeric characters with underscores
+def process_tag(tname):
+    ret = ""
+    for c in tname[:64]:
+        if not c.isalnum():
+            ret += '_'
+        else:
+            ret += c
+    return ret
 
 # Create your views here.
 @api_view(["GET", "POST"])
@@ -20,23 +28,10 @@ from .models import Scrap, Comment, Tag
 @renderer_classes([JSONRenderer])
 def scraps_view(request):
     if request.method == "GET":
-        """
-        returns a list of Scraps
-        - Scrap id
-        - title
-        - description
-        - file URL
-        - file type
-        - time posted
-        - time updated
-        - number of likes
-        - number of Comments
-        - list of Tags
-        """
         context = []
 
         scraps = Scrap.objects.annotate(
-            num_comments=Count('comments'), num_likes=Count('likers')).order_by("time_updated")
+            num_comments=Count('comments', distinct=True), num_likes=Count('likers', distinct=True)).order_by("-time_updated")
         for scrap in scraps:
             ans = scrap.serialize()
             ans["file_url"] = request.build_absolute_uri(ans["file_url"])
@@ -47,13 +42,6 @@ def scraps_view(request):
         return Response(data=context)
 
     elif request.method == "POST":
-        """
-        creates a new Scrap
-        - title (required)
-        - description (defaults to empty)
-        - uploaded file (required) (validated) (get file type from either file extension or header)
-        - list of Tags
-        """
         # request.data should contain JSON data
         if "title" not in request.data or "file" not in request.data:
             return Response("Required: post title and a file to upload",
@@ -64,10 +52,10 @@ def scraps_view(request):
 
         # validate title (just based on length)
         if len(title) < 1:
-            return Response("Title too short; minimum length = 1",
+            return Response("Invalid; Title too short; minimum length = 1",
                             status=status.HTTP_400_BAD_REQUEST)
         elif len(title) > 100:
-            return Response("Username too long; maximum length = 100",
+            return Response("Invalid; Username too long; maximum length = 100",
                             status=status.HTTP_400_BAD_REQUEST)
 
         # TODO: validate file (currently just using the content_type header)
@@ -77,7 +65,7 @@ def scraps_view(request):
                 im = Image.open(file)
                 im.verify()
             except:
-                return Response("Invalid image file",
+                return Response("Invalid; image file could not be verified",
                                 status=status.HTTP_400_BAD_REQUEST)
             file_type = "image"
         elif file.content_type == "text/plain":
@@ -105,7 +93,7 @@ def scraps_view(request):
         if "tags" in request.data:
             alltags = json.loads(request.data["tags"])
             for tname in alltags:
-                tname = tname[:64]
+                tname = process_tag(tname)
                 prevtag = Tag.objects.filter(name=tname, scrap__id=scrap.id)
                 if not prevtag:
                     tag = Tag(name=tname, scrap=scrap)
@@ -123,19 +111,6 @@ def specific_scrap_view(request, sid):
     scrap = get_object_or_404(Scrap, id=sid)
 
     if request.method == "GET":
-        """
-        returns a specific Scrap
-        - Scrap id
-        - title
-        - description
-        - file URL
-        - file type
-        - time posted
-        - time updated
-        - number of likes
-        - number of Comments
-        - list of Tags
-        """
         context = scrap.serialize()
         context["file_url"] = request.build_absolute_uri(context["file_url"])
         context["num_comments"] = scrap.comments.count()
@@ -144,23 +119,40 @@ def specific_scrap_view(request, sid):
         return Response(data=context)
 
     elif request.method == "PUT":
-        """
-        updates a Scrap
-        - title
-        - description
-        - automatically updates time updated
-        - list of Tags to upload???
-        - list of Tags to remove???
+        if request.user != scrap.user:
+            return Response("Invalid; Cannot edit another user's post", status=status.HTTP_400_BAD_REQUEST)
+        
+        if "title" in request.data:
+            scrap.title = request.data["title"]
+        
+        if "description" in request.data:
+            scrap.description = request.data["description"]
+        
+        scrap.save()
 
-        "what if I want to upload a new file?" make a new post it's free
-        """
-        pass
+        if "tags" in request.data:
+            for tname in request.data["tags"]:
+                tname = process_tag(tname)
+                prevtag = Tag.objects.filter(name=tname, scrap__id=scrap.id)
+                if not prevtag:
+                    tag = Tag(name=tname, scrap=scrap)
+                    tag.save()
+        
+        context = scrap.serialize()
+        context["file_url"] = request.build_absolute_uri(context["file_url"])
+        context["num_comments"] = scrap.comments.count()
+        context["num_likes"] = scrap.likers.count()
+
+        return Response(data=context)
 
     elif request.method == "DELETE":
-        """
-        deletes a Scrap
-        """
-        pass
+        if request.user != scrap.user:
+            return Response("Invalid; Cannot delete another user's post", status=status.HTTP_400_BAD_REQUEST)
+        try:
+            scrap.delete()
+            return Response(True)
+        except:
+            return Response(False)
 
 @api_view(["GET", "POST"])
 @csrf_exempt
@@ -170,21 +162,10 @@ def scrap_comments_view(request, sid):
     scrap = get_object_or_404(Scrap, id=sid)
 
     if request.method == "GET":
-        """
-        returns list of Comments on a given Scrap
-        - Comment id
-        - content
-        - username of User
-        - display name of User's Profile
-        - title of Scrap
-        - time posted
-        - id of Comment this one is a reply to (omitted if NULL)
-        - number of likes
-        """
         context = []
 
         comments = scrap.comments.annotate(
-            num_likes=Count('likers')).order_by("time_updated")
+            num_likes=Count('likers', distinct=True)).order_by("-time_updated")
         for comment in comments:
             ans = comment.serialize()
             ans["num_likes"] = comment.num_likes
@@ -193,16 +174,9 @@ def scrap_comments_view(request, sid):
         return Response(data=context)
 
     elif request.method == "POST":
-        """
-        create new Comment
-        - content
-        - id of Comment to reply to
-        - pulls Scrap info from sid
-        - pulls User info from authentication system
-        """
         # request.data should contain JSON data
         if "content" not in request.data:
-            return Response("Required: comment content",
+            return Response("Invalid; Missing comment content",
                             status=status.HTTP_400_BAD_REQUEST)
 
         content = request.data["content"]
@@ -229,29 +203,15 @@ def specific_scrap_comment_view(request, sid, cid):
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     if request.method == "GET":
-        """
-        returns Comment
-        - Comment id
-        - content
-        - username of User
-        - display name of User's Profile
-        - title of Scrap
-        - time posted
-        - id of Comment this one is a reply to (omitted if NULL)
-        - number of likes
-        """
         context = comment.serialize()
         context["num_likes"] = comment.likers.count()
 
         return Response(data=context)
 
     elif request.method == "POST":
-        """
-        create new Comment, but as reply to this comment
-        """
         # request.data should contain JSON data
         if "content" not in request.data:
-            return Response("Required: comment content",
+            return Response("Invalid; Missing comment content",
                             status=status.HTTP_400_BAD_REQUEST)
 
         content = request.data["content"]
@@ -272,47 +232,84 @@ def specific_scrap_comment_view(request, sid, cid):
         edits Comment
         - content (that's it)
         """
-        pass
+        if request.user != comment.user:
+            return Response("Invalid; Cannot edit another user's comment",
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        if "content" in request.data:
+            comment.content = request.data["content"]
+            comment.save()
+        
+        context = comment.serialize()
+        context["num_likes"] = comment.likers.count()
+
+        return Response(data=context)
 
     elif request.method == "DELETE":
-        """
-        deletes a Comment
-        """
-        pass
+        if request.user != comment.user:
+            return Response("Invalid; Cannot delete another user's comment", status=status.HTTP_400_BAD_REQUEST)
+        try:
+            comment.delete()
+            return Response(True)
+        except:
+            return Response(False)
 
 @api_view(["POST", "DELETE"])
 @csrf_exempt
 @permission_classes([IsAuthenticatedOrReadOnly])
 @renderer_classes([JSONRenderer])
 def scrap_like_view(request, sid):
+    scrap = get_object_or_404(Scrap, id=sid)
+
     if request.method == "POST":
         """
         adds a like
         """
-        pass
+        if scrap.likers.filter(pk=request.user.pk).exists():
+            return Response(False)
+        
+        scrap.likers.add(request.user)
+        return Response(True)
 
     elif request.method == "DELETE":
         """
         removes a like
         """
-        pass
+        if not scrap.likers.filter(pk=request.user.pk).exists():
+            return Response(False)
+        
+        scrap.likers.remove(request.user)
+        return Response(True)
 
 @api_view(["POST", "DELETE"])
 @csrf_exempt
 @permission_classes([IsAuthenticatedOrReadOnly])
 @renderer_classes([JSONRenderer])
 def comment_like_view(request, sid, cid):
+    scrap = get_object_or_404(Scrap, id=sid)
+    comment = get_object_or_404(Comment, id=cid)
+    if comment.scrap != scrap:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    
     if request.method == "POST":
         """
         adds a like
         """
-        pass
+        if comment.likers.filter(pk=request.user.pk).exists():
+            return Response(False)
+        
+        comment.likers.add(request.user)
+        return Response(True)
 
     elif request.method == "DELETE":
         """
         removes a like
         """
-        pass
+        if not comment.likers.filter(pk=request.user.pk).exists():
+            return Response(False)
+        
+        comment.likers.remove(request.user)
+        return Response(True)
 
 @api_view(["GET", "POST", "DELETE"])
 @csrf_exempt
@@ -322,27 +319,19 @@ def scrap_tags_view(request, sid):
     scrap = get_object_or_404(Scrap, id=sid)
 
     if request.method == "GET":
-        """
-        returns a list of Tags
-        - list of Tags
-        """
         return Response(data=scrap.get_tags())
 
     elif request.method == "POST":
-        """
-        adds a new Tag to the Scrap
-        - tag name
-        """
         if "tag" not in request.data:
             return Response("Invalid: need tag",
                             status=status.HTTP_400_BAD_REQUEST)
         elif scrap.user.username != request.user.username:
             return Response("Invalid: cannot alter tags of another user's post")
 
-        tname = request.data["tag"][:64]
-        prevtag = Tag.objects.filter(name=tname).filter(scrap__id=scrap.id)
+        tname = process_tag(request.data["tag"])
+        prevtag = Tag.objects.filter(name=tname, scrap__id=scrap.id)
         if prevtag:
-            return Response("Tag already exists")
+            return Response("Invalid; Tag already exists")
         else:
             tag = Tag(name=tname, scrap=scrap)
             tag.save()
@@ -350,32 +339,26 @@ def scrap_tags_view(request, sid):
         
 
     elif request.method == "DELETE":
-        """
-        removes a Tag from the Scrap
-        - tag name
-        """
-        pass
+        if request.user != scrap.user:
+            return Response("Invalid; Cannot alter another user's post", status=status.HTTP_400_BAD_REQUEST)
+        
+        if "tag" not in request.data:
+            return Response("Invalid; no tag to delete identified", status=status.HTTP_400_BAD_REQUEST)
+        
+        tag = get_object_or_404(Tag, name=request.data["tag"], scrap__id=scrap.id)
+        try:
+            tag.delete()
+            return Response(True)
+        except:
+            return Response(False)
 
 @api_view(["GET"])
 @csrf_exempt
 @renderer_classes([JSONRenderer])
 def tagged_scraps_view(request, tname):
-    """
-    returns a list of Scraps with a given Tag
-    - Scrap id
-    - title
-    - description
-    - file URL
-    - file type
-    - time posted
-    - time updated
-    - number of likes
-    - number of Comments
-    - list of Tags
-    """
     scraps = Scrap.objects.all().filter(tags__name=tname).annotate(
         num_comments=Count('comments'),
-        num_likes=Count('likers')).order_by('time_updated')
+        num_likes=Count('likers')).order_by('-time_updated')
 
     context = []
 

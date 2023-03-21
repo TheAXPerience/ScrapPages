@@ -41,7 +41,7 @@ class Scrap(models.Model):
     )
 
     time_posted = models.DateTimeField(
-        auto_now=True
+        auto_now_add=True
     )
 
     time_updated = models.DateTimeField(
@@ -85,10 +85,6 @@ class Scrap(models.Model):
         for tag in self.tags.all():
             ans.append(tag.serialize())
         return ans
-    
-    def save(self, *args, **kwargs):
-        self.time_updated = datetime.datetime.now()
-        super(Scrap, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         # get and delete file
@@ -107,7 +103,7 @@ class Comment(models.Model):
     content = models.TextField()
 
     time_posted = models.DateTimeField(
-        auto_now=True
+        auto_now_add=True
     )
 
     time_updated = models.DateTimeField(
@@ -151,10 +147,6 @@ class Comment(models.Model):
             "reply_to_id": None if (not self.reply_to) else self.reply_to.id
         }
         # manually get num_likes
-    
-    def save(self, *args, **kwargs):
-        self.time_updated = datetime.datetime.now()
-        super(Comment, self).save(*args, **kwargs)
 
 
 class Tag(models.Model):
