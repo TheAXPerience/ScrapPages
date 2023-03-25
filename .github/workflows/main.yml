@@ -46,8 +46,9 @@ jobs:
      
       # Runs database migrations on the Django app
       - name: Run migrations
-        run: python manage.py migrate
+        run: python scrappages/manage.py migrate
       
       # Run all tests with verbose flag
       - name: Run all tests
+        working-directory: ./scrappages
         run: pytest -v
