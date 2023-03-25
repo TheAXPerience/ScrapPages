@@ -17,7 +17,7 @@ on:
 # Set up the job for this workflow
 jobs:
   # This workflow contains a single job that we are calling "build-and-test"
-  build-and-test:
+  django_test:
 
     # The runner environment to use
     runs-on: ubuntu-latest
@@ -46,9 +46,6 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       # You can optionally provide a name before a step. This is an example of an unnamed step.
       - uses: actions/checkout@v2
-
-      # Runs a single echo command using the runners shell
-      - run: echo Entering Django CI/CD Pipeline!
       
       # Uses the action setup-python@v2, specifying version 3.9
       # This installs Python 3.9 to the runner environment
