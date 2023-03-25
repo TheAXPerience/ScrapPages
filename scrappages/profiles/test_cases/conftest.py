@@ -1,28 +1,32 @@
-from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.base import ContentFile
 from PIL import Image
-from io import StringIO
+from io import BytesIO
+import os
 import pytest
 
 @pytest.fixture
 def red_image():
-    img_io = StringIO.StringIO()
+    img_io = BytesIO()
     img = Image.new("RGB", (50, 50), (200, 0, 0))
-    img.save(img_io, format="JPG")
-    imgf = SimpleUploadedFile("redfile.jpg", img_io.getvalue())
+    img.save(img_io, format="JPEG")
+    imgf = ContentFile(img_io.getvalue(), "redfile.jpg")
+    return imgf
 
 @pytest.fixture
 def green_image():
-    img_io = StringIO.StringIO()
+    img_io = BytesIO()
     img = Image.new("RGB", (50, 50), (0, 200, 0))
-    img.save(img_io, format="JPG")
-    imgf = SimpleUploadedFile("greenfile.jpg", img_io.getvalue())
+    img.save(img_io, format="JPEG")
+    imgf = ContentFile(img_io.getvalue(), "greenfile.jpg")
+    return imgf
 
 @pytest.fixture
 def blue_image():
-    img_io = StringIO.StringIO()
+    img_io = BytesIO()
     img = Image.new("RGB", (50, 50), (0, 0, 200))
-    img.save(img_io, format="JPG")
-    imgf = SimpleUploadedFile("bluefile.jpg", img_io.getvalue())
+    img.save(img_io, format="JPEG")
+    imgf = ContentFile(img_io.getvalue(), "bluefile.jpg")
+    return imgf
 
 @pytest.fixture
 def new_user(db, django_user_model):
@@ -35,7 +39,7 @@ def new_user(db, django_user_model):
 @pytest.fixture
 def red_profile(db, django_user_model, red_image):
     user = django_user_model.objects.create_user(
-        username="red",
+        username="redman",
         password="red12345"
     )
 
@@ -43,12 +47,16 @@ def red_profile(db, django_user_model, red_image):
     profile.display_name = "RedGuy420"
     profile.description = "red"
     profile.profile_picture = red_image
-    return user
+    user.save()
+
+    yield user
+    os.unlink(profile.profile_picture.path)
+
 
 @pytest.fixture
 def blue_profile(db, django_user_model, blue_image):
     user = django_user_model.objects.create_user(
-        username="blue",
+        username="blueman",
         password="blue12345"
     )
 
@@ -56,4 +64,7 @@ def blue_profile(db, django_user_model, blue_image):
     profile.display_name = "BlueMan69"
     profile.description = "blue"
     profile.profile_picture = blue_image
-    return user
+    user.save()
+
+    yield user
+    os.unlink(profile.profile_picture.path)
