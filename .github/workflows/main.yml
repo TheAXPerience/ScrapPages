@@ -61,6 +61,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r scrappages/requirements.txt
+          python -m pip install pytest pytest-django
      
       # Runs database migrations on the Django app
       - name: Run migrations
