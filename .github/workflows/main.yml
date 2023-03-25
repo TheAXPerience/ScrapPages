@@ -21,6 +21,24 @@ jobs:
 
     # The runner environment to use
     runs-on: ubuntu-latest
+    
+    # Set up Postgres
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_DB: scrappages_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: admin123
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options:
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
 
     # Steps mostly contain CLI commands (via "run") and actions (via "uses")
     # Each step begins with a hyphen -
