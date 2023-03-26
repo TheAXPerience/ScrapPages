@@ -55,7 +55,7 @@ def scraps_view(request):
             return Response("Invalid; Title too short; minimum length = 1",
                             status=status.HTTP_400_BAD_REQUEST)
         elif len(title) > 100:
-            return Response("Invalid; Username too long; maximum length = 100",
+            return Response("Invalid; Title too long; maximum length = 100",
                             status=status.HTTP_400_BAD_REQUEST)
 
         # TODO: validate file (currently just using the content_type header)
@@ -123,6 +123,12 @@ def specific_scrap_view(request, sid):
             return Response("Invalid; Cannot edit another user's post", status=status.HTTP_400_BAD_REQUEST)
         
         if "title" in request.data:
+            if len(request.data["title"]) < 1:
+                return Response("Invalid; Title too short; minimum length = 1",
+                                status=status.HTTP_400_BAD_REQUEST)
+            elif len(request.data["title"]) > 100:
+                return Response("Invalid; Title too long; maximum length = 100",
+                                status=status.HTTP_400_BAD_REQUEST)
             scrap.title = request.data["title"]
         
         if "description" in request.data:
@@ -247,7 +253,8 @@ def specific_scrap_comment_view(request, sid, cid):
 
     elif request.method == "DELETE":
         if request.user != comment.user:
-            return Response("Invalid; Cannot delete another user's comment", status=status.HTTP_400_BAD_REQUEST)
+            return Response("Invalid; Cannot delete another user's comment", 
+                            status=status.HTTP_400_BAD_REQUEST)
         try:
             comment.delete()
             return Response(True)
@@ -326,12 +333,14 @@ def scrap_tags_view(request, sid):
             return Response("Invalid: need tag",
                             status=status.HTTP_400_BAD_REQUEST)
         elif scrap.user.username != request.user.username:
-            return Response("Invalid: cannot alter tags of another user's post")
+            return Response("Invalid: cannot alter tags of another user's post",
+                            status_code=status.HTTP_400_BAD_REQUEST)
 
         tname = process_tag(request.data["tag"])
         prevtag = Tag.objects.filter(name=tname, scrap__id=scrap.id)
         if prevtag:
-            return Response("Invalid; Tag already exists")
+            return Response("Invalid; Tag already exists",
+                            status_code=status.HTTP_400_BAD_REQUEST)
         else:
             tag = Tag(name=tname, scrap=scrap)
             tag.save()
@@ -340,10 +349,12 @@ def scrap_tags_view(request, sid):
 
     elif request.method == "DELETE":
         if request.user != scrap.user:
-            return Response("Invalid; Cannot alter another user's post", status=status.HTTP_400_BAD_REQUEST)
+            return Response("Invalid; Cannot alter another user's post",
+                            status=status.HTTP_400_BAD_REQUEST)
         
         if "tag" not in request.data:
-            return Response("Invalid; no tag to delete identified", status=status.HTTP_400_BAD_REQUEST)
+            return Response("Invalid; no tag to delete identified",
+                            status=status.HTTP_400_BAD_REQUEST)
         
         tag = get_object_or_404(Tag, name=request.data["tag"], scrap__id=scrap.id)
         try:
