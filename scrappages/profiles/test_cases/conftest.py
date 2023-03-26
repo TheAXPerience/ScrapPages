@@ -1,4 +1,5 @@
 from django.core.files.base import ContentFile
+from django.shortcuts import get_object_or_404
 from PIL import Image
 from io import BytesIO
 import os
@@ -50,7 +51,11 @@ def red_profile(db, django_user_model, red_image):
     user.save()
 
     yield user
-    os.unlink(profile.profile_picture.path)
+    
+    try:
+        os.unlink(profile.profile_picture.path)
+    except:
+        pass
 
 
 @pytest.fixture
@@ -67,4 +72,8 @@ def blue_profile(db, django_user_model, blue_image):
     user.save()
 
     yield user
-    os.unlink(profile.profile_picture.path)
+
+    try:
+        os.unlink(profile.profile_picture.path)
+    except:
+        pass

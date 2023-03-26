@@ -1,10 +1,13 @@
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.test.client import encode_multipart, BOUNDARY, MULTIPART_CONTENT
 from PIL import Image
 import json
 import os
 import pytest
 from profiles.models import Profile
+from gallery.models import Scrap
 
 
 # user_profiles
@@ -138,8 +141,37 @@ def test_specific_user_profile_unassigned_username(client):
 
     assert response.status_code == 404
 
-def test_specific_user_profile_put(client, red_profile):
-    pass
+def test_specific_user_profile_put(client, red_profile, green_image):
+    logged_in = client.login(username="redman", password="red12345")
+    assert logged_in
+
+    data = {
+        'display_name': 'kohozuna',
+        'description': 'king salmonid #1',
+        'profile_picture': green_image
+    }
+
+    response = client.put(
+        reverse(
+            'specific_user_profile',
+            kwargs={'username': red_profile.username}
+        ),
+        data=encode_multipart(BOUNDARY, data),
+        content_type=MULTIPART_CONTENT
+    )
+
+    result = json.loads(response.content.decode('utf-8'))
+    assert response.status_code == 200
+    assert result['display_name'] == 'kohozuna'
+    assert result['description'] == 'king salmonid #1'
+    assert result['num_scraps'] == 0
+    assert result['profile_picture_url'].endswith(os.path.join(settings.MEDIA_URL, "profile_pictures/redman__greenfile.jpg"))
+    
+    reduser = get_object_or_404(Profile, user=red_profile)
+    assert reduser.display_name == result['display_name']
+    assert reduser.description == result['description']
+
+    os.unlink(reduser.profile_picture.path)
 
 @pytest.mark.parametrize("username, message", [
     ("smol", '"Display name invalid; minimum length = 5"'),
@@ -147,18 +179,142 @@ def test_specific_user_profile_put(client, red_profile):
     ("noticeme!!!", '"Display name invalid; alphanumeric characters only"')
 ])
 def test_specific_user_profile_put_invalid_display_name(client, red_profile, username, message):
-    pass
+    logged_in = client.login(username="redman", password="red12345")
+    assert logged_in
+
+    data = {
+        'display_name': username
+    }
+
+    response = client.put(
+        reverse(
+            'specific_user_profile',
+            kwargs={'username': red_profile.username}
+        ),
+        data=encode_multipart(BOUNDARY, data),
+        content_type=MULTIPART_CONTENT
+    )
+
+    result = response.content.decode('utf-8')
+    assert response.status_code == 400
+    assert result == message
 
 def test_specific_user_profile_put_wrong_user(client, red_profile, blue_profile):
-    pass
+    logged_in = client.login(username="blueman", password="blue12345")
+    assert logged_in
+
+    data = {
+        'display_name': "youbuttface"
+    }
+
+    response = client.put(
+        reverse(
+            'specific_user_profile',
+            kwargs={'username': red_profile.username}
+        ),
+        data=encode_multipart(BOUNDARY, data),
+        content_type=MULTIPART_CONTENT
+    )
+
+    result = response.content.decode('utf-8')
+    assert response.status_code == 400
+    assert result == '"You do not have permission to alter another user\'s profile"'
 
 def test_specific_user_profile_delete(client, blue_profile):
-    pass
+    response = client.get(
+        reverse(
+            'specific_user_profile',
+            kwargs={"username": blue_profile.username}
+        )
+    )
+    assert response.status_code == 200
+
+    logged_in = client.login(username="blueman", password="blue12345")
+    assert logged_in
+
+    response = client.delete(
+        reverse(
+            'specific_user_profile',
+            kwargs={"username": blue_profile.username}
+        )
+    )
+    assert response.status_code == 200
+    assert response.content.decode('utf-8') == 'true'
+
+    response = client.get(
+        reverse(
+            'specific_user_profile',
+            kwargs={"username": blue_profile.username}
+        )
+    )
+    assert response.status_code == 404
 
 def test_specific_user_profile_delete_wrong_user(client, red_profile, blue_profile):
-    pass
+    logged_in = client.login(username="blueman", password="blue12345")
+    assert logged_in
+
+    response = client.delete(
+        reverse(
+            'specific_user_profile',
+            kwargs={"username": red_profile.username}
+        )
+    )
+    assert response.status_code == 400
+    assert response.content.decode('utf-8') == '"You do not have permission to alter another user\'s profile"'
 
 # specific_user_scraps
 # GET
-def test_specific_user_scraps(client, red_profile):
-    pass
+def test_specific_user_scraps(client, red_profile, blue_profile, red_image, green_image, blue_image):
+    response = client.get(
+        reverse(
+            'specific_user_scraps',
+            kwargs={'username': red_profile.username}
+        )
+    )
+    assert response.status_code == 200
+    assert response.content.decode('utf-8') == '[]'
+
+    s1 = Scrap.objects.create(
+        user=red_profile,
+        title="red",
+        description="red image",
+        file=red_image,
+        file_type="image"
+    )
+    s2 = Scrap.objects.create(
+        user=red_profile,
+        title="green",
+        description="green image",
+        file=green_image,
+        file_type="image"
+    )
+    s3 = Scrap.objects.create(
+        user=blue_profile,
+        title="blue",
+        description="blue image",
+        file=blue_image,
+        file_type="image"
+    )
+
+    response = client.get(
+        reverse(
+            'specific_user_scraps',
+            kwargs={'username': blue_profile.username}
+        )
+    )
+    assert response.status_code == 200
+    result = json.loads(response.content.decode('utf-8'))
+    assert len(result) == 1
+    assert result[0]['id'] == s3.id
+
+    response = client.get(
+        reverse(
+            'specific_user_scraps',
+            kwargs={'username': red_profile.username}
+        )
+    )
+    assert response.status_code == 200
+    result = json.loads(response.content.decode('utf-8'))
+    assert len(result) == 2
+    assert result[0]['id'] in [s1.id, s2.id]
+    assert result[1]['id'] in [s1.id, s2.id]
