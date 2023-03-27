@@ -117,12 +117,8 @@ def test_scraps_post_not_logged_in(client, violet_jpg):
     data = {
         'title': 'vile vio',
         'description': 'violet is violent',
-        'file': violet_jpg,
-        'tags': json.dumps([
-            'violet', 'pic', 'helloworld'
-        ])
+        'file': violet_jpg
     }
-
     response = client.post(
         reverse(
             'scraps'
@@ -133,15 +129,21 @@ def test_scraps_post_not_logged_in(client, violet_jpg):
 
     assert response.status_code == 401
 
-def test_scraps_post_invalid_title(client, new_user, violet_jpg):
+@pytest.mark.parametrize('title, message', [
+    ('', 'Invalid; Title too short; minimum length = 1'),
+    ('i have been told my previous post had a title that is too short so i want to make a title that is too long to get back at the savages that made this website, like let me ramble on and on and on in my title, i know theres a description, but who tf cares when the title is all people are going to see, see, i am using the most elongated versions of words ever known to mankind',
+    "Invalid; Title too long; maximum length = 100"),
+    (None, 'Required: post title and a file to upload')
+])
+def test_scraps_post_invalid_title(client, new_user, violet_jpg, title, message):
     logged_in = client.login(username='bison', password='calf123!')
     assert logged_in
 
     data = {
-        'title': '',
         'file': violet_jpg
     }
-
+    if title is not None:
+        data['title'] = title
     response = client.post(
         reverse(
             'scraps'
@@ -151,38 +153,7 @@ def test_scraps_post_invalid_title(client, new_user, violet_jpg):
     )
 
     assert response.status_code == 400
-    assert response.content.decode('utf-8') == '"Invalid; Title too short; minimum length = 1"'
-
-    data = {
-        'title': 'i have been told my previous post had a title that is too short so i want to make a title that is too long to get back at the savages that made this website, like let me ramble on and on and on in my title, i know theres a description, but who tf cares when the title is all people are going to see, see, i am using the most elongated versions of words ever known to mankind',
-        'file': violet_jpg
-    }
-
-    response = client.post(
-        reverse(
-            'scraps'
-        ),
-        data=data,
-        content_type=MULTIPART_CONTENT
-    )
-
-    assert response.status_code == 400
-    assert response.content.decode('utf-8') == '"Invalid; Title too long; maximum length = 100"'
-
-    data = {
-        'file': violet_jpg
-    }
-
-    response = client.post(
-        reverse(
-            'scraps'
-        ),
-        data=data,
-        content_type=MULTIPART_CONTENT
-    )
-
-    assert response.status_code == 400
-    assert response.content.decode('utf-8') == '"Required: post title and a file to upload"'
+    assert json.loads(response.content.decode('utf-8')) == message
 
 def test_scraps_post_invalid_file(client, new_user, white_pdf, md_file):
     logged_in = client.login(username='bison', password='calf123!')
@@ -319,12 +290,17 @@ def test_specific_scrap_put(client, user1, scrap1):
         assert result['tags'][i]['name'] in ['purple', 'violet', 'pic']
         assert result['tags'][i]['scrap_id'] == scrap1.id
 
-def test_specific_scrap_put_invalid_title(client, user1, scrap1):
+@pytest.mark.parametrize("title, message", [
+    ('', 'Invalid; Title too short; minimum length = 1'),
+    ('my title was rejected yet again so i must now recover my lost sense of pride and go to deviantart in order to finally get the respect that i deserve, and i cannot live with the man whom i cannot respect bc he does not like airplanes',
+    'Invalid; Title too long; maximum length = 100')
+])
+def test_specific_scrap_put_invalid_title(client, user1, scrap1, title, message):
     logged_in = client.login(username='pooky', password='pooky123')
     assert logged_in
 
     data = {
-        'title': '',
+        'title': title,
         'description': 'royal purple'
     }
 
@@ -338,24 +314,7 @@ def test_specific_scrap_put_invalid_title(client, user1, scrap1):
     )
 
     assert response.status_code == 400
-    assert response.content.decode('utf-8') == '"Invalid; Title too short; minimum length = 1"'
-
-    data = {
-        'title': 'my title was rejected yet again so i must now recover my lost sense of pride and go to deviantart in order to finally get the respect that i deserve, and i cannot live with the man whom i cannot respect bc he does not like airplanes',
-        'description': 'royal purple'
-    }
-
-    response = client.put(
-        reverse(
-            'specific_scrap',
-            kwargs={'sid': scrap1.id}
-        ),
-        data=encode_multipart(BOUNDARY, data),
-        content_type=MULTIPART_CONTENT
-    )
-    
-    assert response.status_code == 400
-    assert response.content.decode('utf-8') == '"Invalid; Title too long; maximum length = 100"'
+    assert json.loads(response.content.decode('utf-8')) == message
 
 def test_specific_scrap_put_wrong_user(client, user1, user2, scrap1):
     logged_in = client.login(username='silver', password='silver123')

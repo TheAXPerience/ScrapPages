@@ -9,7 +9,6 @@ import pytest
 from profiles.models import Profile
 from gallery.models import Scrap
 
-
 # user_profiles
 # GET, POST
 def test_user_profiles_get(client, red_profile):
