@@ -155,7 +155,7 @@ def test_scraps_post_invalid_title(client, new_user, violet_jpg, title, message)
     assert response.status_code == 400
     assert json.loads(response.content.decode('utf-8')) == message
 
-def test_scraps_post_invalid_file(client, new_user, white_pdf, md_file):
+def test_scraps_post_invalid_file_pdf(client, new_user, white_pdf):
     logged_in = client.login(username='bison', password='calf123!')
     assert logged_in
 
@@ -163,7 +163,6 @@ def test_scraps_post_invalid_file(client, new_user, white_pdf, md_file):
         'title': 'take me!!!',
         'file': white_pdf
     }
-
     response = client.post(
         reverse(
             'scraps'
@@ -174,12 +173,15 @@ def test_scraps_post_invalid_file(client, new_user, white_pdf, md_file):
 
     assert response.status_code == 400
     assert response.content.decode('utf-8') == '"Invalid file type uploaded: only accepts TXT, PNG, JPG, JPEG and GIF"'
+
+def test_scraps_post_invalid_file_md(client, new_user, md_file):
+    logged_in = client.login(username='bison', password='calf123!')
+    assert logged_in
 
     data = {
         'title': 'take me!!!',
         'file': md_file
     }
-
     response = client.post(
         reverse(
             'scraps'
@@ -190,6 +192,10 @@ def test_scraps_post_invalid_file(client, new_user, white_pdf, md_file):
 
     assert response.status_code == 400
     assert response.content.decode('utf-8') == '"Invalid file type uploaded: only accepts TXT, PNG, JPG, JPEG and GIF"'
+
+def test_scraps_post_missing_file(client, new_user):
+    logged_in = client.login(username='bison', password='calf123!')
+    assert logged_in
 
     data = {
         'title': 'take me!!!'
@@ -205,6 +211,10 @@ def test_scraps_post_invalid_file(client, new_user, white_pdf, md_file):
 
     assert response.status_code == 400
     assert response.content.decode('utf-8') == '"Required: post title and a file to upload"'
+
+def test_scraps_post_invalid_image_file(client, new_user):
+    logged_in = client.login(username='bison', password='calf123!')
+    assert logged_in
 
     data = {
         'title': 'take me!!!',
