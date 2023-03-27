@@ -171,9 +171,12 @@ def scrap_comments_view(request, sid):
         context = []
 
         comments = scrap.comments.annotate(
-            num_likes=Count('likers', distinct=True)).order_by("-time_updated")
+            num_likes=Count('likers', distinct=True),
+            num_replies=Count('replies', distinct=True)
+        ).order_by("-time_updated")
         for comment in comments:
             ans = comment.serialize()
+            ans["num_replies"] = comment.num_replies
             ans["num_likes"] = comment.num_likes
             context.append(ans)
 
@@ -210,6 +213,7 @@ def specific_scrap_comment_view(request, sid, cid):
 
     if request.method == "GET":
         context = comment.serialize()
+        context["num_replies"] = comment.replies.count()
         context["num_likes"] = comment.likers.count()
 
         return Response(data=context)
@@ -247,6 +251,7 @@ def specific_scrap_comment_view(request, sid, cid):
             comment.save()
         
         context = comment.serialize()
+        context["num_replies"] = comment.replies.count()
         context["num_likes"] = comment.likers.count()
 
         return Response(data=context)
@@ -334,13 +339,13 @@ def scrap_tags_view(request, sid):
                             status=status.HTTP_400_BAD_REQUEST)
         elif scrap.user.username != request.user.username:
             return Response("Invalid: cannot alter tags of another user's post",
-                            status_code=status.HTTP_400_BAD_REQUEST)
+                            status=status.HTTP_400_BAD_REQUEST)
 
         tname = process_tag(request.data["tag"])
         prevtag = Tag.objects.filter(name=tname, scrap__id=scrap.id)
         if prevtag:
             return Response("Invalid; Tag already exists",
-                            status_code=status.HTTP_400_BAD_REQUEST)
+                            status=status.HTTP_400_BAD_REQUEST)
         else:
             tag = Tag(name=tname, scrap=scrap)
             tag.save()
@@ -369,7 +374,8 @@ def scrap_tags_view(request, sid):
 def tagged_scraps_view(request, tname):
     scraps = Scrap.objects.all().filter(tags__name=tname).annotate(
         num_comments=Count('comments'),
-        num_likes=Count('likers')).order_by('-time_updated')
+        num_likes=Count('likers')
+    ).order_by('-time_updated')
 
     context = []
 

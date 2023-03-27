@@ -211,7 +211,7 @@ def tags2(scrap2):
     tags = []
     tags.append(Tag.objects.create(
         name="pic",
-        scrap=scrap1
+        scrap=scrap2
     ))
     tags.append(Tag.objects.create(
         name="cyan",
