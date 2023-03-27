@@ -146,6 +146,9 @@ def specific_user_profile_view(request, username, format=None):
 
         if "profile_picture" in request.data:
             # validate picture via Pillow
+            if request.data['profile_picture'].content_type not in ['image/png', 'image/jpg', 'image/jpeg']:
+                return Response("Invalid file type; only accepts PNG and JPG",
+                                status=status.HTTP_400_BAD_REQUEST)
             try:
                 im = Image.open(request.data["profile_picture"])
                 im.verify()

@@ -30,6 +30,18 @@ def blue_image():
     return imgf
 
 @pytest.fixture
+def white_image():
+    img_io = BytesIO()
+    img = Image.new("RGB", (50, 50), (255, 255, 255))
+    img.save(img_io, format="GIF")
+    imgf = ContentFile(img_io.getvalue(), "whitefile.gif")
+    return imgf
+
+@pytest.fixture
+def invalid_image():
+    return ContentFile("hello world", 'blackfile.png')
+
+@pytest.fixture
 def new_user(db, django_user_model):
     user = django_user_model.objects.create_user(
         username="bison",

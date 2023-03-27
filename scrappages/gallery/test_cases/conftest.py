@@ -1,4 +1,6 @@
-from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.base import ContentFile
+from PIL import Image
+from io import BytesIO
 import os
 import pytest
 from gallery.models import Scrap, Comment, Tag
@@ -18,7 +20,7 @@ def new_scrap(db, new_user):
         user=new_user,
         title="Bear",
         description="Bears!",
-        file=SimpleUploadedFile("newfile.txt", b"Bears!"),
+        file=ContentFile("Bears!", "newfile.txt"),
         file_type="text"
     )
     yield scrap
@@ -53,14 +55,14 @@ def new_tag(db, new_scrap):
 
 @pytest.fixture
 def user1(db, django_user_model):
-    return User.objects.create_user(
+    return django_user_model.objects.create_user(
         username="pooky",
         password="pooky123"
     )
 
 @pytest.fixture
 def user2(db, django_user_model):
-    return User.objects.create_user(
+    return django_user_model.objects.create_user(
         username="silver",
         password="silver123"
     )
@@ -105,7 +107,7 @@ def txt_file():
 def md_file():
     return ContentFile("grey", "greyfile.md")
 
-@pytest.feature
+@pytest.fixture
 def scrap1(user1, yellow_png):
     scrap = Scrap.objects.create(
         user=user1,
@@ -122,7 +124,7 @@ def scrap1(user1, yellow_png):
     except:
         pass
 
-@pytest.feature
+@pytest.fixture
 def scrap2(user1, cyan_gif):
     scrap = Scrap.objects.create(
         user=user1,
@@ -139,7 +141,7 @@ def scrap2(user1, cyan_gif):
     except:
         pass
 
-@pytest.feature
+@pytest.fixture
 def scrap3(user2, txt_file):
     scrap = Scrap.objects.create(
         user=user2,
@@ -162,7 +164,7 @@ def comment1(user1, scrap1):
         user=user1,
         scrap=scrap1,
         content="Lemony yellow",
-        reply_to=False
+        reply_to=None
     )
 
     yield comment
@@ -173,7 +175,7 @@ def comment2(user2, scrap1):
         user=user2,
         scrap=scrap1,
         content="mellow yellow",
-        reply_to=False
+        reply_to=None
     )
 
     yield comment
@@ -221,3 +223,8 @@ def tags2(scrap2):
     ))
     
     yield tags
+
+@pytest.fixture
+def like_scrap1(scrap1, user1):
+    scrap1.likers.add(user1)
+    yield scrap1

@@ -173,6 +173,44 @@ def test_specific_user_profile_put(client, red_profile, green_image):
 
     os.unlink(reduser.profile_picture.path)
 
+def test_specific_user_profile_put_invalid_files(client, red_profile, white_image, invalid_image):
+    logged_in = client.login(username="redman", password="red12345")
+    assert logged_in
+
+    data = {
+        'profile_picture': white_image
+    }
+
+    response = client.put(
+        reverse(
+            'specific_user_profile',
+            kwargs={'username': red_profile.username}
+        ),
+        data=encode_multipart(BOUNDARY, data),
+        content_type=MULTIPART_CONTENT
+    )
+
+    result = response.content.decode('utf-8')
+    assert response.status_code == 400
+    assert result == '"Invalid file type; only accepts PNG and JPG"'
+    
+    data = {
+        'profile_picture': invalid_image
+    }
+
+    response = client.put(
+        reverse(
+            'specific_user_profile',
+            kwargs={'username': red_profile.username}
+        ),
+        data=encode_multipart(BOUNDARY, data),
+        content_type=MULTIPART_CONTENT
+    )
+
+    result = response.content.decode('utf-8')
+    assert response.status_code == 400
+    assert result == '"Invalid image file"'
+
 @pytest.mark.parametrize("username, message", [
     ("smol", '"Display name invalid; minimum length = 5"'),
     ("qwaszxerdfcvbnmgjhkltpyouiqpwoieurytjgskhdflzmxcnvbasd", '"Display name invalid; maximum length = 50"'),
@@ -318,3 +356,7 @@ def test_specific_user_scraps(client, red_profile, blue_profile, red_image, gree
     assert len(result) == 2
     assert result[0]['id'] in [s1.id, s2.id]
     assert result[1]['id'] in [s1.id, s2.id]
+
+    s1.delete()
+    s2.delete()
+    s3.delete()
