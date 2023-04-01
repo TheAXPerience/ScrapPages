@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scrappages
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scrappages
+  template:
+    metadata:
+      labels:
+        app: scrappages
+    spec:
+      containers:
+      - name: scrappages
+        image: axscrapbookregistry.azurecr.io/scrappages-azure:v1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_HOST
+          value: "scrapbook-ps-server.postgres.database.azure.com"
+        - name: DATABASE_USER
+          value: "wearywildcat6"
+        - name: DATABASE_PASSWORD
+          value: "5kcQe0q55UtjcZhG2JviTg"
+        - name: DATABASE_NAME
+          value: "scrappages_db"
+        - name: DJANGO_SECRET_KEY
+          value: "django-insecure-27=g(3nvyey3v-cpo-#pqh^ry8p!!y16%pvhqc3xx(qq9bny&0"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: "app"
+                operator: In
+                values:
+                - scrappages
+            topologyKey: "kubernetes.io/hostname"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scrappages-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8000
+  selector:
+    app: scrappages

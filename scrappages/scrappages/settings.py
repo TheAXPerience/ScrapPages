@@ -24,12 +24,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # this will be changed in production
-SECRET_KEY = 'django-insecure-27=g(3nvyey3v-cpo-#pqh^ry8p!!y16%pvhqc3xx(qq9bny&0'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+# 'django-insecure-27=g(3nvyey3v-cpo-#pqh^ry8p!!y16%pvhqc3xx(qq9bny&0'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -84,11 +85,12 @@ WSGI_APPLICATION = 'scrappages.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
+        'NAME': os.getenv('DATABASE_NAME'),
+        'USER': os.getenv('DATABASE_USER'),
+        'PASSWORD': os.getenv('DATABASE_PASSWORD'),
+        'HOST': os.getenv('DATABASE_HOST'),
+        'PORT': '5432',
+        'OPTIONS': {'sslmode': 'require'}
     }
 }
 
